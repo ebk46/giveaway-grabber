@@ -61,7 +61,7 @@ process.env.UNFOLLOW_UPDATES =
 //start index code
 (async () => {
 	let config = {
-		headless: false,
+		headless: true,
 		args: ['--mute-audio']
 	};
 	if (args['remember_me']) {
@@ -72,7 +72,7 @@ process.env.UNFOLLOW_UPDATES =
 	}
 	const browser = await puppeteer.launch(config);
 	const page = await browser.newPage();
-
+	
 	let pageNumber = 1;
 	if (args.page) {
 		pageNumber = args.page;
@@ -87,7 +87,6 @@ process.env.UNFOLLOW_UPDATES =
 		args['2FA'],
 		args['remember_me']
 	);
-
 	await sqlite.open('./gg.db');
 
 	//initialize database and perform any upgrades

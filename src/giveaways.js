@@ -9,6 +9,7 @@ const sgMail = require('@sendgrid/mail');
 const Tesseract = require('tesseract.js');
 const sqlite = require('./database');
 const urlTypes = require('./globals');
+const urlModule = require('url');
 
 let currentGiveawayUrl = '';
 
@@ -325,8 +326,11 @@ async function handleGiveawayResult(page) {
 			resultTextEl
 		);
 		console.log(resultText);
-		const pageUrl = new URL(page.url()).pathname;
-
+		await page.screenshot({
+      path: 'result.png'
+    });
+		//const pageUrl = new URL(page.url()).pathname;
+		const pageUrl = urlModule.parse(page.url()).pathname
 		if (resultText.includes('won')) {
 			const notification = {
 				title: 'giveaway-grabber',
@@ -613,7 +617,8 @@ async function enterWinnerPromoCardGiveaway(page, repeatAttempt) {
 	if (selector) {
 		await enterNoEntryRequirementGiveaway(page, true);
 	} else {
-		await enterVideoGiveaway(page);
+		// This is for headless, so no video capabilities
+		//await enterVideoGiveaway(page);
 	}
 }
 
@@ -795,7 +800,8 @@ async function enterGiveaways(page, pageNumber) {
 			if (noEntryRequired.length > 0) {
 				await enterNoEntryRequirementGiveaway(page);
 			} else if (videoRequired.length > 0) {
-				await enterVideoGiveaway(page);
+				// This is for headless, so no video capabilities
+				//await enterVideoGiveaway(page);
 			} else if (followRequired.length > 0) {
 				await enterFollowGiveaway(page);
 				if (process.env.UNFOLLOW_UPDATES) {

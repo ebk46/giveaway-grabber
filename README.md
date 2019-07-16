@@ -2,6 +2,13 @@
 
 # giveaway-grabber 🎁
 
+NOTE: This is the headless version designed to be run on a remote server. It cannot enter video giveaways, and CAPTCHA + OTP must be handled through the terminal. Instructions:
+1. SSH into your server and set up giveaway-grabber. Everything about this part is the same as the non-headless version up until you run 'npm start'
+2. Once GG is running, it may prompt you for a CAPTCHA. A screenshot called 'captcha.png' will be located in the project directory, so use scp or another ssh based command to retrieve/view the screenshot. 
+3. Enter the CAPTCHA followed by the 'Enter' key.
+4. It may then prompt you for a OTP (One-time-password). It will automatically have chosen the first option which is likely a phone number (if you have one on file). Once you get your OTP, enter it just like the CAPTCHA
+5. That's it! You shoudl be up and running getting those sweepstakes.
+
 This script will loop through all the [Amazon giveaways](https://www.amazon.com/ga/giveaways/) and try to submit entries for them.
 
 If there are things you really never want to win (like socks), you can add keywords to the blacklist in the config file

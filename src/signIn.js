@@ -1,5 +1,61 @@
 const Tesseract = require('tesseract.js');
 const { sendSystemNotification } = require('./utils');
+const readline = require('readline');
+
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout
+});
+
+function getInput(prompt) {
+    return new Promise(function(resolve, reject) {
+      rl.question(prompt, (answer) => {
+        resolve(answer);
+      });
+    })
+}
+
+function readInput(buffer) {
+    return new Promise(function(resolve, reject) {
+        let code = '';
+        buffer.on('data', (chunk) => {
+            code += `${chunk}\n`
+        })
+        buffer.on('end', () => {
+            console.log("\nReceived END signal")
+            const empty_inputs = ['', ' ', '\n', '\n\n']
+            if (empty_inputs.includes(code)) {
+                log('[!] No input was passed in!')
+                reject()
+            } else {
+                resolve(code)
+            }
+        })
+        buffer.setEncoding('utf8')
+        buffer.resume()
+    })
+}
+
+function promiseTimeout(ms, promise){
+
+  return new Promise(function(resolve, reject){
+
+    // create a timeout to reject promise if not resolved
+    var timer = setTimeout(function(){
+        reject(new Error("promise timeout"));
+    }, ms);
+
+    promise
+        .then(function(res){
+            clearTimeout(timer);
+            resolve(res);
+        })
+        .catch(function(err){
+            clearTimeout(timer);
+            reject(err);
+        });
+  });
+};
 
 /**
  * Goes to Amazon Sign In page and tries to sign in with given credentials
@@ -59,6 +115,44 @@ module.exports = async function(
 	await signInPromise;
 
 	await checkForCaptcha(page, password);
+	await page.screenshot({
+       path: 'post-captcha.png'
+  });
+  try {
+    await page.waitForSelector('#continue', {
+      timeout: 1000
+    });
+    console.log("Found OTP, Clicking 'Continue'.")
+    await page.click('#continue');
+    await page.waitForSelector('.cvf-widget-input', {
+      timeout: 3000
+    });
+    await page.click('.cvf-widget-input');
+    let otp = await getInput("Enter OTP: ");
+		otp = otp.trim().replace(' ', '');
+		console.log("You entered: '", otp, "'");
+		console.log("Your OTP is ", otp.length, " chars long");
+    await page.type(
+			'.cvf-widget-input',
+			otp
+		);
+    console.log("Typed in OTP");
+    await page.screenshot({
+      path: 'otp-typed.png'
+    });
+    await page.waitForSelector('.cvf-widget-btn-verify .a-button-inner .a-button-input', {
+      timeout: 1000
+    });
+    console.log("Found submit button. Clicking.")
+    await page.click('.cvf-widget-btn-verify .a-button-inner .a-button-input');
+    const otpSubmittedPromise = page.waitForNavigation({ timeout: 0 });
+    await otpSubmittedPromise;
+    console.log("Wow we made it.")
+  } catch (error) {
+    console.log("Error: ", error);
+    //const html = await page.content();
+    //console.log(html);
+  }
 
 	if (twoFactorAuth) {
 		try {
@@ -103,10 +197,19 @@ async function checkForCaptcha(page, password) {
 		console.log('OCR Value:  ' + tessValue.text.trim().replace(' ', ''));
 		await page.waitForSelector('#auth-captcha-guess');
 		await page.click('#auth-captcha-guess');
+		await page.screenshot({
+      path: 'captcha.png'
+    });
+		let code = await getInput("Enter CAPTCHA: ");
+		code = code.trim().replace(' ', '');
+		console.log("You entered: '", code, "'")
+		console.log("Your code is ", code.length, " chars long")
 		await page.type(
 			'#auth-captcha-guess',
-			tessValue.text.trim().replace(' ', '')
+			code
+			//tessValue.text.trim().replace(' ', '')
 		);
+		console.log("Submitted CAPTCHA")
 
 		//enter password again...
 		await page.waitForSelector('#ap_password');
@@ -115,11 +218,19 @@ async function checkForCaptcha(page, password) {
 
 		const message = 'ENTER CAPTCHA!';
 		console.log(message);
+
 		const notification = {
 			title: 'giveaway-grabber',
 			message: message
 		};
 		sendSystemNotification(notification);
+		// Since we are trying to remotely enter the CAPTCHA, we need
+		// to click the button now
+		await page.screenshot({
+      path: 'pre-captcha-submit.png'
+    });
+  	await page.waitForSelector('#signInSubmit');
+  	await page.click('#signInSubmit');
 
 		await page.waitFor(
 			() => !document.querySelector('#auth-captcha-image'),
